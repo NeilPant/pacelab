@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-03-01T07:00:00.000Z</Id>
+      <Lap StartTime="2026-03-01T07:00:00.000Z">
+        <TotalTimeSeconds>60.0</TotalTimeSeconds>
+        <DistanceMeters>190.0</DistanceMeters>
+        <Track>
+          <Trackpoint><Time>2026-03-01T07:00:00.000Z</Time><Position><LatitudeDegrees>55.67</LatitudeDegrees><LongitudeDegrees>12.56</LongitudeDegrees></Position><AltitudeMeters>12.0</AltitudeMeters><DistanceMeters>0.0</DistanceMeters><HeartRateBpm><Value>128</Value></HeartRateBpm><Extensions><ns3:TPX><ns3:Speed>3.1</ns3:Speed><ns3:RunCadence>83</ns3:RunCadence></ns3:TPX></Extensions></Trackpoint>
+          <Trackpoint><Time>2026-03-01T07:00:30.000Z</Time><Position><LatitudeDegrees>55.67085</LatitudeDegrees><LongitudeDegrees>12.56</LongitudeDegrees></Position><AltitudeMeters>12.4</AltitudeMeters><DistanceMeters>95.0</DistanceMeters><HeartRateBpm><Value>133</Value></HeartRateBpm><Extensions><ns3:TPX><ns3:Speed>3.2</ns3:Speed><ns3:RunCadence>84</ns3:RunCadence></ns3:TPX></Extensions></Trackpoint>
+          <Trackpoint><Time>2026-03-01T07:01:00.000Z</Time><Position><LatitudeDegrees>55.6717</LatitudeDegrees><LongitudeDegrees>12.56</LongitudeDegrees></Position><AltitudeMeters>12.8</AltitudeMeters><DistanceMeters>190.0</DistanceMeters><HeartRateBpm><Value>138</Value></HeartRateBpm><Extensions><ns3:TPX><ns3:Speed>3.3</ns3:Speed><ns3:RunCadence>85</ns3:RunCadence></ns3:TPX></Extensions></Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>

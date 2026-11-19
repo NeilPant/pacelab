@@ -1,0 +1,21 @@
+[project]
+name = "pacelab-server"
+version = "0.1.0"
+description = "Self-hosted web app for your running data, built on pacelab."
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pacelab",
+    "fastapi>=0.165",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.34",
+    "sqlalchemy>=2.1",
+    "uvicorn>=0.54",
+]
+
+[project.scripts]
+pacelab-server = "pacelab_server.main:run"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

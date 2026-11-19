@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.filename }} - pacelab{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/">All activities</a></p>
+<h1>{{ activity.sport.replace("_", " ") | capitalize }} on {{ activity.start_time.strftime("%Y-%m-%d %H:%M") }} UTC</h1>
+<p class="meta">{{ activity.filename }}{% if activity.device %} · {{ activity.device }}{% endif %}</p>
+
+<dl class="stats">
+  <div><dt>Distance</dt><dd>{{ activity.distance_m | km }}</dd></div>
+  <div><dt>Moving time</dt><dd>{{ activity.moving_s | duration }}</dd></div>
+  <div><dt>Pace</dt><dd>{{ activity.pace_s_per_km | pace }}</dd></div>
+  <div><dt>Avg heart rate</dt><dd>{{ "%.0f bpm" | format(activity.avg_heart_rate) if activity.avg_heart_rate else "-" }}</dd></div>
+  <div><dt>Climb</dt><dd>{{ "%.0f m" | format(activity.elevation_gain_m) }}</dd></div>
+  <div><dt>Elapsed</dt><dd>{{ activity.elapsed_s | duration }}</dd></div>
+</dl>
+
+{% macro line(title, s, label) %}
+{% if s %}
+<figure class="chart">
+  <figcaption>{{ title }} <span>{{ label(s.low) }} - {{ label(s.high) }}</span></figcaption>
+  <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" role="img" aria-label="{{ title }} over distance">
+    <path d="{{ s.path }}" vector-effect="non-scaling-stroke"/>
+  </svg>
+</figure>
+{% endif %}
+{% endmacro %}
+
+{{ line("Pace", pace, format_pace) }}
+{{ line("Heart rate", heart_rate, format_bpm) }}
+{{ line("Elevation", elevation, format_metres) }}
+
+{% if efforts %}
+<h2>Best efforts</h2>
+<table class="efforts">
+  <tbody>
+    {% for distance, seconds in efforts.items() %}
+    <tr><td>{{ distance | distance_name }}</td><td class="num">{{ seconds | duration }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
