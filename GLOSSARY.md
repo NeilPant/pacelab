@@ -18,6 +18,18 @@
 
 **Pace** - Moving time per kilometre.
 
+**Grade-adjusted pace (GAP)** - Equivalent flat-ground moving pace, in seconds per kilometre, for running sports. Uses the running energy-cost model from [Minetti et al. (2002), Figure 1](https://doi.org/10.1152/japplphysiol.01177.2001):
+
+```text
+C(g) = 155.4*g^5 - 30.4*g^4 - 43.3*g^3 + 46.3*g^2 + 19.5*g + 3.6
+equivalent_distance = sum(interval_distance * C(g) / C(0))
+GAP = sum(moving_seconds) * 1000 / equivalent_distance
+```
+
+Here `g` is elevation change divided by recorded distance (a ratio, not percent); uphill is positive. Grade is the elevation difference across a centered 30 m distance window divided by that window's length, with elevations interpolated between records. Windows shorten at the ends of each moving block, preserving a constant slope even in short activities or irregular samples. They never cross stationary intervals or recording gaps. Grades are clamped to the study's -45% to +45% range to avoid extrapolating the polynomial.
+
+Only moving intervals contribute time and equivalent distance. Missing or nonfinite elevation at either endpoint of any moving interval makes GAP unavailable (`None`), as do non-running sports and activities with no moving time. The value is an estimate of metabolic equivalence, not a prediction of downhill speed, and is not intended to reproduce a proprietary platform's GAP. Existing pace, climb and other summary fields are unchanged.
+
 **Cadence** - Steps per minute, both feet. FIT, GPX and TCX files store running cadence per foot; the parsers double it.
 
 **Climb** (elevation gain) - Ascent with altitude noise filtered out: a rise or fall counts only once it reaches 3 m from the last turning point.

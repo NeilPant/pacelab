@@ -34,6 +34,8 @@ morning.fit  2026-03-01 07:00  running  11.60 km  59:58  5:10 /km  148 bpm  +26 
 
 Other commands: `pacelab efforts FILE` (fastest 400 m to marathon) and `pacelab export FILE out.parquet` (the normalised record stream as CSV or Parquet).
 
+Add `--include-gap` to `pacelab summary` to show grade-adjusted running pace. It uses the Minetti running-cost model with distance-based grade smoothing; the [glossary](GLOSSARY.md) defines the formula and missing-data behavior. The default CLI output stays unchanged.
+
 Run the web app:
 
 ```bash
@@ -52,11 +54,12 @@ docker compose up
 
 ```python
 from pacelab import load
-from pacelab.metrics import best_efforts, summarize
+from pacelab.metrics import best_efforts, grade_adjusted_pace, summarize
 
 activity = load("morning.fit")
 activity.records  # polars DataFrame, one row per sample, canonical units
 summarize(activity)  # distance, moving time, pace, heart rate, climb
+grade_adjusted_pace(activity)  # equivalent flat-ground pace in s/km, or None
 best_efforts(activity)  # {400.0: 116.0, 1000.0: 290.5, 5000.0: 1533.0, ...}
 ```
 

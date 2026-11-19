@@ -16,7 +16,12 @@ File = Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True
 
 
 @app.command(help="Print distance, time, pace, heart rate and climb for each file.")
-def summary(files: Files) -> None:
+def summary(
+    files: Files,
+    include_gap: Annotated[
+        bool, typer.Option("--include-gap", help="Include grade-adjusted running pace.")
+    ] = False,
+) -> None:
     failed = False
     for path in files:
         try:
@@ -27,11 +32,12 @@ def summary(files: Files) -> None:
             continue
         result = summarize(activity)
         heart_rate = f"{result.avg_heart_rate:.0f} bpm" if result.avg_heart_rate else "-"
+        gap = f"  GAP {format.pace(result.grade_adjusted_pace_s_per_km)}" if include_gap else ""
         typer.echo(
             f"{path.name}  {activity.start_time:%Y-%m-%d %H:%M}  {activity.sport.value}  "
             f"{format.kilometres(result.distance_m)}  {format.duration(result.moving_s)}  "
             f"{format.pace(result.pace_s_per_km)}  {heart_rate}  "
-            f"+{result.elevation_gain_m:.0f} m"
+            f"+{result.elevation_gain_m:.0f} m{gap}"
         )
     if failed:
         raise typer.Exit(1)

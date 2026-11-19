@@ -13,6 +13,8 @@ FloatArray = np.ndarray[Any, np.dtype[np.float64]]
 MAX_GAP_S = 30.0
 MOVING_SPEED_MPS = 0.5
 ELEVATION_THRESHOLD_M = 3.0
+GRADE_SMOOTHING_M = 30.0
+MAX_RUNNING_GRADE = 0.45
 FITNESS_DAYS = 42
 FATIGUE_DAYS = 7
 BANISTER_MALE = (0.64, 1.92)
@@ -32,6 +34,7 @@ class Summary:
     avg_power: float | None
     elevation_gain_m: float
     elevation_loss_m: float
+    grade_adjusted_pace_s_per_km: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,7 +90,47 @@ def summarize(activity: Activity) -> Summary:
         avg_power=_weighted_mean(_column(activity, "power")[:-1], moving_weights),
         elevation_gain_m=gain,
         elevation_loss_m=loss,
+        grade_adjusted_pace_s_per_km=grade_adjusted_pace(activity),
     )
+
+
+def grade_adjusted_pace(activity: Activity) -> float | None:
+    """Equivalent flat-ground moving pace (s/km), using Minetti et al. (2002).
+
+    Grades are smoothed over a centered 30 m window within each moving block,
+    then bounded to the model's measured range. Missing elevation in any moving
+    interval makes the whole-run metric unavailable rather than partial.
+    """
+    if not activity.sport.is_running:
+        return None
+    steps = _intervals(activity)
+    moving = np.flatnonzero(steps.moving)
+    if moving.size == 0:
+        return None
+    altitude = _column(activity, "altitude")
+    valid = np.isfinite(altitude[:-1]) & np.isfinite(altitude[1:]) & np.isfinite(steps.meters)
+    if not valid[moving].all():
+        return None
+
+    equivalent_m = 0.0
+    # Do not smooth across a stationary interval or a recording gap.
+    blocks = np.split(moving, np.flatnonzero(np.diff(moving) > 1) + 1)
+    for block in blocks:
+        meters = steps.meters[block]
+        distance = np.concatenate(([0.0], np.cumsum(meters)))
+        heights = altitude[np.concatenate((block, [block[-1] + 1]))]
+        centers = (distance[:-1] + distance[1:]) / 2
+        left = np.maximum(0.0, centers - GRADE_SMOOTHING_M / 2)
+        right = np.minimum(distance[-1], centers + GRADE_SMOOTHING_M / 2)
+        # Interpolation makes the window distance-based even with irregular samples,
+        # and shortening it at the edges preserves constant slopes exactly.
+        grade = (np.interp(right, distance, heights) - np.interp(left, distance, heights)) / (
+            right - left
+        )
+        grade = np.clip(grade, -MAX_RUNNING_GRADE, MAX_RUNNING_GRADE)
+        cost = np.polyval([155.4, -30.4, -43.3, 46.3, 19.5, 3.6], grade)
+        equivalent_m += float(np.sum(meters * cost / 3.6))
+    return float(steps.seconds[moving].sum()) * 1000 / equivalent_m
 
 
 def elevation_change(

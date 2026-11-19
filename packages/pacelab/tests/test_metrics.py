@@ -2,7 +2,7 @@ import datetime as dt
 import math
 
 import pytest
-from pacelab import Activity, Sport
+from pacelab import Activity, Sport, metrics
 from pacelab.metrics import (
     aerobic_decoupling,
     best_efforts,
@@ -91,3 +91,74 @@ def test_training_load_fills_rest_days_and_reports_form_going_into_the_day():
     assert frame["fitness"].to_list() == pytest.approx([100 / 42, 100 / 42 * 41 / 42])
     assert frame["fatigue"].to_list() == pytest.approx([100 / 7, 100 / 7 * 6 / 7])
     assert frame["form"].to_list() == pytest.approx([0.0, 100 / 42 - 100 / 7])
+
+
+@pytest.mark.parametrize(
+    ("grade", "cost"),
+    [
+        (0.0, 3.6),
+        (0.1, 5.968214),
+        (-0.1, 2.151706),
+        (0.3, 12.579282),
+        (-0.3, 2.462238),
+        (0.45, 19.4260145625),
+        (-0.45, 4.0323054375),
+    ],
+)
+def test_grade_adjusted_pace_matches_hand_computed_constant_grades(grade, cost):
+    # 1000 m in 300 s; values above are the published polynomial evaluated by hand.
+    rows = [{"t": i * 3, "distance": i * 10, "altitude": 200 + grade * i * 10} for i in range(101)]
+    activity = run(rows)
+    expected = 300 * 3.6 / cost
+    assert metrics.grade_adjusted_pace(activity) == pytest.approx(expected)
+    assert summarize(activity).grade_adjusted_pace_s_per_km == pytest.approx(expected)
+
+
+def test_grade_adjusted_pace_smooths_noise_over_distance_not_sample_count():
+    rows = [{"t": i, "distance": i * 3, "altitude": 100 + (-1) ** i} for i in range(1001)]
+    assert metrics.grade_adjusted_pace(run(rows)) == pytest.approx(1000 / 3, rel=0.005)
+    # The same straight climb at irregular recording intervals has the same pace.
+    distances = [0, 1, 10, 30, 100, 300, 600, 900, 1000]
+    activity = run([{"t": d / 10, "distance": d, "altitude": 100 + d * 0.1} for d in distances])
+    assert metrics.grade_adjusted_pace(activity) == pytest.approx(100 * 3.6 / 5.968214)
+
+
+def test_grade_adjusted_pace_aggregates_equivalent_distance_and_breaks_at_pauses():
+    rows = [{"t": i * 3, "distance": i * 10, "altitude": 100 + i} for i in range(51)]
+    # A stationary interval and an altitude jump must not smooth into either slope.
+    rows += [{"t": 160, "distance": 500, "altitude": 1000}]
+    rows += [
+        {"t": 160 + i * 3, "distance": 500 + i * 10, "altitude": 1000 - i} for i in range(1, 51)
+    ]
+    expected = 300 * 1000 / (500 * 5.968214 / 3.6 + 500 * 2.151706 / 3.6)
+    assert metrics.grade_adjusted_pace(run(rows)) == pytest.approx(expected)
+
+
+def test_grade_adjusted_pace_excludes_recording_gaps_and_clamps_extreme_grades():
+    rows = [
+        {"t": 0, "distance": 0, "altitude": 0},
+        {"t": 10, "distance": 100, "altitude": 100},
+        {"t": 100, "distance": 10000, "altitude": -10000},
+        {"t": 110, "distance": 10100, "altitude": -10000},
+    ]
+    expected = 20 * 1000 / (100 * 19.4260145625 / 3.6 + 100)
+    assert metrics.grade_adjusted_pace(run(rows)) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("altitudes", [(None, None, None), (100, None, 102), (100, math.inf, 102)])
+def test_grade_adjusted_pace_is_unavailable_with_incomplete_elevation(altitudes):
+    activity = run([{"t": i, "distance": i * 3, "altitude": a} for i, a in enumerate(altitudes)])
+    assert metrics.grade_adjusted_pace(activity) is None
+
+
+def test_grade_adjusted_pace_is_only_defined_for_moving_runs():
+    assert metrics.grade_adjusted_pace(run([{"t": 0, "distance": 0, "altitude": 100}])) is None
+    assert metrics.grade_adjusted_pace(run(steady(10, 0, altitude=100))) is None
+    walking = Activity.from_rows(
+        [
+            {"timestamp": START, "distance": 0, "altitude": 100},
+            {"timestamp": START + dt.timedelta(seconds=10), "distance": 30, "altitude": 103},
+        ],
+        sport=Sport.WALKING,
+    )
+    assert metrics.grade_adjusted_pace(walking) is None
